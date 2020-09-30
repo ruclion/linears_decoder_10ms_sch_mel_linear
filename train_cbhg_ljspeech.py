@@ -1,3 +1,4 @@
+# 不会的问题：GriffinLim的power和iter不会设置，也不知道有什么影响，长河的1.0和100，常用的是1.5和60
 import os
 import time
 import numpy as np
@@ -13,7 +14,31 @@ from torch.utils.data import DataLoader
 
 from model_torch import DCBHG
 from dataload_ljspeech import ljspeechDtaset
+from audio import hparams as audio_hparams
+from audio import normalized_db_mel2wav, normalized_db_spec2wav, write_wav
 
+
+# 超参数个数：16
+hparams = {
+    'sample_rate': 16000,
+    'preemphasis': 0.97,
+    'n_fft': 400,
+    'hop_length': 160,
+    'win_length': 400,
+    'num_mels': 80,
+    'n_mfcc': 13,
+    'window': 'hann',
+    'fmin': 30.,
+    'fmax': 7600.,
+    'ref_db': 20,  
+    'min_db': -80.0,  
+    'griffin_lim_power': 1.5,
+    'griffin_lim_iterations': 60,  
+    'silence_db': -28.0,
+    'center': False,
+}
+
+assert hparams == audio_hparams
 
 
 # 用GPU训练，CPU读数据
@@ -55,8 +80,24 @@ global_epoch = 0
 #   return model
 
 
-def eval_model_wav(spec, spec_pred, length, log_dir, global_step):
-  print('服务器上的版本有写好的')
+def eval_model_generate(spec, spec_pred, length, log_dir, global_step):
+  print("EVAL LENGTH:", length)
+  print("EVAL SPEC PRED SHAPE:", spec_pred.shape)
+  
+  y_pred = normalized_db_spec2wav(spec_pred)
+  pred_wav_path = os.path.join(log_dir, "checkpoint_step_{}_pred.wav".format(global_step))
+  write_wav(pred_wav_path, y_pred)
+  pred_spec_path = os.path.join(log_dir, "checkpoint_step_{}_pred_spec.npy".format(global_step))
+  np.save(pred_spec_path, spec_pred)
+
+
+  print("EVAL LENGTH:", length)
+  print("EVAL SPEC SHAPE:", spec.shape)
+  y = normalized_db_spec2wav(spec)
+  orig_wav_path = os.path.join(log_dir, "checkpoint_step_{}_original.wav".format(global_step))
+  write_wav(orig_wav_path, y)
+  orig_spec_path = os.path.join(log_dir, "checkpoint_step_{}_orig_spec.npy".format(global_step))
+  np.save(orig_spec_path, spec)
 
 
 def main():
@@ -133,7 +174,7 @@ def main():
                 "global_step": global_step,
                 "global_epoch": global_epoch,
             }, checkpoint_path)
-            eval_model_wav(specs[0].cpu().data.numpy(), specs_pred[0].cpu().data.numpy(), lengths[0], ljspeech_log_dir, global_step)
+            eval_model_generate(specs[0].cpu().data.numpy(), specs_pred[0].cpu().data.numpy(), lengths[0], ljspeech_log_dir, global_step)
           
 
           # BATCH操作结束，step++

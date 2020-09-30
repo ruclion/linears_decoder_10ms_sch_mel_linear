@@ -246,7 +246,7 @@ class CBHG(nn.Module):
 
 class DCBHG(nn.Module):
   def __init__(self):
-    super(DBLSTM, self).__init__()
+    super(DCBHG, self).__init__()
     self.input_dim = hparams.phn_num
     self.hidden_dim_before_second_cbhg_div2 = hparams.hidden_dim_before_second_cbhg_div2
 
